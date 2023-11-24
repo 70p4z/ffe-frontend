@@ -55,7 +55,7 @@ upstream_stem='https://dirigeant.escrime-ffe.fr'
 
 def upstream_login(upstream_session):
   upstream_session.personnes=[]
-  upstream_session.engagements=[]
+  upstream_session.engagements={}
   upstream_session.structure_id=0
   # login to the interface
   # Grab the session
@@ -228,6 +228,8 @@ def root():
   # relogin to ensure refreshed login
   if time.time() - upstream_session.login_time > TIMEOUT_S:
     upstream_login(upstream_session)
+    upstream_populate_personnes(upstream_session)
+    upstream_populate_engagements(upstream_session)
   return render_template('list_engagements.html', webdir=args.webdir, engagements=upstream_session.engagements)
 
 @app.route("/logout")
