@@ -1,0 +1,32 @@
+<head>
+  <title>FFE Listing {{ engagements[0]['meta_date'] }} {{ engagements[0]['commune'] }}</title>
+</head>
+<body>
+  <a href="{{webdir}}/">Liste</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a style="" href="{{webdir}}/logout">Logout</a><br/>
+  <table>
+      <big>{{ engagements[0]['meta_date'] }} {{ engagements[0]['commune'] }}</big>
+      <td><b>NOM</b></td><td><b>Prenom</b></td><td><b>Categorie</b></td><td><b>Non-inscrit</b></td><td><b>Inscrit</b></td>
+      {% for personne in personnes %}
+      <tr>
+        <td>{{personne['nom']}}</td><td>{{personne['prenom']}}</td><td>{{personne['sexe']}} - {{personne['categorie']}}</td>
+        {# subscribe #}
+        <td bgcolor="lightyellow">
+        {% for sub in personne['subs'] %}
+          {% if sub['sub_id'] == ""  %}
+          <a href="{{webdir}}/subscribe/{{sub['id']}}/{{personne['personne_id']}}">{{sub['discipline']}}-{{sub['categorie']}}</a>
+          {% endif %}
+        {% endfor %}
+        </td>
+        {# unsubscribe #}
+        <td bgcolor="lightgreen">
+        {% for sub in personne['subs'] %}
+          {% if sub['sub_id'] != ""  %}
+          <a href="{{webdir}}/unsubscribe/{{sub['id']}}/{{sub['sub_id']}}">{{sub['discipline']}}-{{sub['categorie']}}</a>
+          {% endif %}
+        {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+  </table>
+</body>
