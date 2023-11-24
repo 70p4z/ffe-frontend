@@ -21,6 +21,8 @@ import binascii
 VERSION="1"
 
 TIMEOUT_S=3600
+POPULATE_TIMEOUT_S=86400*15 # timeout before refresh at login
+POPULATE_INTERVAL_S=30 # minimum interval, to avoid saturation
 
 LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO').upper()
 LOGFORMAT = '%(asctime)s %(levelname)s %(threadName)s %(funcName)s %(message)s'
@@ -56,7 +58,6 @@ upstream_stem='https://dirigeant.escrime-ffe.fr'
 
 def upstream_login(upstream_session):
   upstream_session.personnes=[]
-  upstream_session.engagements={}
   upstream_session.structure_id=0
   # login to the interface
   # Grab the session
@@ -134,6 +135,10 @@ def upstream_populate_engagements(upstream_session, start=0):
   # from september, consider next year season
   if (today.month >= 9):
     season+=1
+
+  # don't update too often, it's time consuming
+  if 'last_populate_engagements' in common_data and time.time() - common_data['last_populate_engagements'] < POPULATE_INTERVAL_S:
+    return
   
   engagement_status = 3 # open for subscription
   
@@ -153,8 +158,6 @@ def upstream_populate_engagements(upstream_session, start=0):
       engagements=engagements+j['data']
       sys.stdout.write(f'\rloading engagements: {start}/{total} ({round(start*100/total)}%)')
       # avoid too long loading
-      if start >= 300:
-        break;
     log.debug(engagements)
     log.debug(len(engagements))
     log.debug(total)
@@ -194,9 +197,14 @@ def upstream_populate_engagements(upstream_session, start=0):
     seng=OrderedDict()
 
   # transform again for easier indexation to play in subscription
-  upstream_session.engagements={}
+  common_data['engagements']=OrderedDict()
   for key, val in seng.items():
-    upstream_session.engagements[val[0]['meta_id']] = val
+    common_data['engagements'][val[0]['meta_id']] = val
+  # cache engagements
+  cache = open("cached-engagements.json", "w+")
+  cache.write(json.dumps(common_data['engagements']))
+  cache.close()
+  common_data['last_populate_engagements']=time.time()
 
 def upstream_subscription_state(upstream_session, engagement_id):
   r = upstream_session.get(f'{upstream_stem}/engagement/engagement/{engagement_id}', headers=headers)
@@ -240,10 +248,11 @@ def upstream_unsubscribe(upstream_session, engagement_id, subscription_id):
 # WEB ENDPOINTS
 # ----------------------------------------------------------------------------
 def render_personnes(upstream_session):
-  return render_template('list_personnes.html', webdir=args.webdir, personnes=upstream_session.personnes)
+  personnes=sorted(upstream_session.personnes, key=lambda x: x['prenom'])
+  return render_template('list_personnes.html', webdir=args.webdir, personnes=personnes)
 
 def render_list_engagements(upstream_session):
-  return render_template('list_engagements.html', webdir=args.webdir, engagements=upstream_session.engagements)
+  return render_template('list_engagements.html', webdir=args.webdir, engagements=common_data['engagements'])
 
 @app.errorhandler(Exception)
 def handle_exception(e):
@@ -263,7 +272,8 @@ def root():
   if time.time() - upstream_session.login_time > TIMEOUT_S:
     upstream_login(upstream_session)
     upstream_populate_personnes(upstream_session)
-    upstream_populate_engagements(upstream_session)
+    if len(common_data['engagements']) == 0 or not 'last_populate_engagements' in common_data or time.time() - common_data['last_populate_engagements'] > POPULATE_TIMEOUT_S:
+      upstream_populate_engagements(upstream_session)
   return render_personnes(upstream_session)
 
 @app.route("/logout")
@@ -297,10 +307,21 @@ def login():
 
   upstream_login(upstream_session)
   upstream_populate_personnes(upstream_session)
-  upstream_populate_engagements(upstream_session)
+  if len(common_data['engagements']) == 0 or not 'last_populate_engagements' in common_data or time.time() - common_data['last_populate_engagements'] > POPULATE_TIMEOUT_S:
+    upstream_populate_engagements(upstream_session)
   resp = make_response(render_personnes(upstream_session))
   resp.set_cookie('ffesession', session)
   return resp
+
+@app.route("/repopulate")
+def populate_engagements():
+  session = request.cookies.get('ffesession')
+  if session is None or not session in upstream_sessions:
+    return render_template('login.html', webdir=args.webdir)
+  upstream_session = upstream_sessions[session]
+  upstream_populate_engagements(upstream_session)
+  # just reload
+  return render_list_engagements(upstream_session)
 
 @app.route("/engagements")
 def engagements():
@@ -319,7 +340,7 @@ def engagement(meta_id):
   upstream_session = upstream_sessions[session]
 
   # retrieve list of engagement for that meta engagement (aggregation)
-  engagements = upstream_session.engagements[meta_id]
+  engagements = common_data['engagements'][meta_id]
   engages = {}
   for e in engagements:
     engages[e['id']] = upstream_subscription_state(upstream_session, e['id']) 
@@ -385,6 +406,15 @@ def unsubscribe(engagement_id, subscription_id):
 # ----------------------------------------------------------------------------
 # TODO: create a new one per session connecting to the flask, with a cookie for each
 upstream_sessions={}
+common_data={}
+common_data['engagements']=OrderedDict()
+try:
+  cache = open("cached-engagements.json", "r")
+  common_data['engagements'] = json.loads(cache.read())
+  cache.close()
+  common_data['last_populate_engagements']=time.time() # consider cache is from now (it's not true!!)
+except:
+  traceback.print_exc()
 
 # run frontend with dev server
 app.run(host='0.0.0.0', port=8080, threaded=False)

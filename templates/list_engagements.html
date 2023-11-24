@@ -7,19 +7,20 @@
 </head>
 <body>
   <p>
-    <a href="{{webdir}}/">&#x1F93A Club</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="{{webdir}}/logout">&#x2620 Logout</a>
+    <a href="{{webdir}}/">&#x1F93A; Club</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="{{webdir}}/repopulate">&#x1F93A; Refresh</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="{{webdir}}/logout">&#x2620; Logout</a>
   </p>
   <table>
     {% for key, eng in engagements.items() %}
     <tr class="{{ loop.cycle('odd', 'even') }}">
       <td width="20%" style="vertical-align: top;"><a href="{{webdir}}/engagement/{{eng[0]['meta_id']}}">{{eng[0]['date_debut']}} - {{eng[0]['commune']}}</a></td>
-      <td width="40%" style="vertical-align: top;">
+      <td style="vertical-align: top;">
         {% for e in eng %}
          {{e['discipline_code']}}-{{e['sexe']}}-{{e['categorie']}}<br/>
         {% endfor %}
       </td>
-      <td width="40%" style="vertical-align: top;">{{eng[0]['intitule']}}</td>
+      <td style="vertical-align: top;">{{eng[0]['intitule']}}</td>
     </tr>
     {% endfor %}
   </table>

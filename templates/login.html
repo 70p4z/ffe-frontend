@@ -1,20 +1,31 @@
+<!DOCTYPE html>
 <head>
   <title>FFE Frontend</title>
+  <style>
+    input {
+      font-size:40px;
+    }
+    body {
+      font-size:40px;
+    }
+  </style>
 </head>
-<body>
-  <table>
-    <form action="{{webdir}}/login" method="POST">
-      <p><big>Saisissez vos identifiants &#x1F93A FFE<br/></big></p>
-      <table>
-        <tr>
-          <td>Utilisateur: </td>
-          <td><input type="text" name="username" id="username" required /></td>
-        </tr>
-        <tr>
-          <td>Mot de passe: </td>
-          <td><input type="password" name="password" id="password" required /></td>
-          <td><input type="submit" value="Login" /></td>
-        </tr>
-    </form>
-  </table>
+<body style="min-width: 1.0vw">
+  <form action="{{webdir}}/login" method="POST">
+    <p><big>Saisissez vos identifiants &#x1F93A; FFE<br/></big></p>
+    <table>
+      <tr>
+        <td>Utilisateur: </td>
+        <td><input type="text" name="username" id="username" required /></td>
+      </tr>
+      <tr>
+        <td>Mot de passe: </td>
+        <td><input type="password" name="password" id="password" required /></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><input type="submit" value="Login" /></td>
+      </tr>
+    </table>
+  </form>
 </body>
