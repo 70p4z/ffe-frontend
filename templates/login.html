@@ -3,12 +3,18 @@
 </head>
 <body>
   <table>
-    <form action="{{webdir}}/login">
-      <big>Saisissez vos identifiants FFE<br/></big>
-      <br/>
-      Utilisateur: <input type="text" name="username" id="username" required /><br/>
-      Mot de passe: <input type="password" name="password" id="password" required />
-      <input type="submit" value="Login" />
+    <form action="{{webdir}}/login" method="POST">
+      <p><big>Saisissez vos identifiants FFE<br/></big></p>
+      <table>
+        <tr>
+          <td>Utilisateur: </td>
+          <td><input type="text" name="username" id="username" required /></td>
+        </tr>
+        <tr>
+          <td>Mot de passe: </td>
+          <td><input type="password" name="password" id="password" required /></td>
+          <td><input type="submit" value="Login" /></td>
+        </tr>
     </form>
   </table>
 </body>

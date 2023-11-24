@@ -264,19 +264,19 @@ def logout():
   resp.set_cookie('ffesession', "")
   return resp
 
-@app.route("/login")
+@app.route("/login", methods = ['GET', 'POST'])
 def login():
   session = request.cookies.get('ffesession')
   #if not session is None:
   #  return root()  
-  if not "username" in request.args or not "password" in request.args:
+  if not "username" in request.form or not "password" in request.form:
     return render_template('login.html', webdir=args.webdir)
   #create a new session
   session = binascii.hexlify(os.urandom(32)).decode('utf8')
   upstream_session=requests.Session()
   # store given credentials
-  upstream_session.username = request.args['username']
-  upstream_session.password = request.args['password']
+  upstream_session.username = request.form['username']
+  upstream_session.password = request.form['password']
   upstream_sessions[session] = upstream_session
 
   upstream_login(upstream_session)
@@ -363,4 +363,4 @@ def unsubscribe(engagement_id, subscription_id):
 upstream_sessions={}
 
 # run frontend with dev server
-app.run(host='0.0.0.0', port=8080, threaded=True)
+app.run(host='0.0.0.0', port=8080, threaded=False)

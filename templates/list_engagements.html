@@ -6,8 +6,9 @@
   </style>
 </head>
 <body>
-  <a href="{{webdir}}/">Liste</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="{{webdir}}/logout">Logout</a><br/>
+  <p>
+    <a href="{{webdir}}/logout">Logout</a>
+  </p>
   <table>
     {% for key, eng in engagements.items() %}
     <tr class="{{ loop.cycle('odd', 'even') }}">
