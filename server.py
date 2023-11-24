@@ -1,6 +1,7 @@
 import os
 import time
 from flask import Flask, render_template, request, make_response
+from werkzeug.exceptions import HTTPException
 import threading
 import datetime
 import requests
@@ -62,11 +63,11 @@ def upstream_login(upstream_session):
   r = upstream_session.get(f'{upstream_stem}/auth/login', headers=headers)
   m = re.search(r'name="csrf-token"\s+content="(\w+)"', r.text)
   if(r.status_code < 200 or r.status_code >= 300):
-    raise BaseException("Can't contact remote authentication service")
+    raise Exception("Can't contact remote authentication service")
   try:
     csrf_token=m.group(1)
   except:
-    raise BaseException("Can't retrieve authentication token")
+    raise Exception("Can't retrieve authentication token")
 
   # authenticate
   formdata= {}
@@ -75,13 +76,13 @@ def upstream_login(upstream_session):
   formdata["password"]= upstream_session.password
   r = upstream_session.post(f'{upstream_stem}/auth/login', data=formdata, headers=headers, allow_redirects=True)
   if(r.status_code < 200 or r.status_code >= 300):
-    raise BaseException("Username/password are invalid")
+    raise Exception("Username/password are invalid")
   m = re.search(r'currentStructureAuth\s*=\s*{"id"\s*:\s*(\w+),', r.text)
   try:
     upstream_session.structure_id=m.group(1)
     upstream_session.login_time=time.time()
   except:
-    raise BaseException("Can't retrieve structure id")
+    raise Exception("Can't retrieve structure id")
 
 def upstream_populate_personnes(upstream_session):
   today = datetime.date.today()
@@ -152,7 +153,7 @@ def upstream_populate_engagements(upstream_session, start=0):
       engagements=engagements+j['data']
       sys.stdout.write(f'\rloading engagements: {start}/{total} ({round(start*100/total)}%)')
       # avoid too long loading
-      if start >= 200:
+      if start >= 300:
         break;
     log.debug(engagements)
     log.debug(len(engagements))
@@ -210,7 +211,7 @@ def upstream_subscription_state(upstream_session, engagement_id):
           # a personne can be subscribing to multiple engagement (allw merging dict in the caller)
           engages[p['personne_id']] = {'sub_id': e['id'], 'eng_id': engagement_id }
   except:
-    raise BaseException(f"Can't retrieve list of subscribers for engagement {engagement_id}")
+    raise Exception(f"Can't retrieve list of subscribers for engagement {engagement_id}")
   return engages
 
 def upstream_subscribe(upstream_session, engagement_id, personne_id):
@@ -224,7 +225,7 @@ def upstream_subscribe(upstream_session, engagement_id, personne_id):
   r = upstream_session.post(f'{upstream_stem}/engagement/engage/{engagement_id}/{upstream_session.structure_id}', json=data, headers=hdrs, allow_redirects=True)
   if(r.status_code < 200 or r.status_code >= 300):
     log.info(r.text)
-    raise BaseException("Subscription failed")
+    raise Exception("Subscription failed")
 
 def upstream_unsubscribe(upstream_session, engagement_id, subscription_id):
   hdrs = dict(headers.items())
@@ -233,11 +234,25 @@ def upstream_unsubscribe(upstream_session, engagement_id, subscription_id):
   r = upstream_session.post(f'{upstream_stem}/engagement/delete-engage/{engagement_id}/{upstream_session.structure_id}/{subscription_id}', headers=hdrs, json=None, allow_redirects=True)
   if(r.status_code < 200 or r.status_code >= 300):
     log.info(r.text)
-    raise BaseException("Unsubscription failed")
+    raise Exception("Unsubscription failed")
 
 # ----------------------------------------------------------------------------
 # WEB ENDPOINTS
 # ----------------------------------------------------------------------------
+def render_personnes(upstream_session):
+  return render_template('list_personnes.html', webdir=args.webdir, personnes=upstream_session.personnes)
+
+def render_list_engagements(upstream_session):
+  return render_template('list_engagements.html', webdir=args.webdir, engagements=upstream_session.engagements)
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # pass through HTTP errors
+    if isinstance(e, HTTPException):
+        return e
+    # now you're handling non-HTTP exceptions only
+    return str(e), 400
+
 @app.route("/")
 def root():
   session = request.cookies.get('ffesession')
@@ -249,7 +264,7 @@ def root():
     upstream_login(upstream_session)
     upstream_populate_personnes(upstream_session)
     upstream_populate_engagements(upstream_session)
-  return render_template('list_engagements.html', webdir=args.webdir, engagements=upstream_session.engagements)
+  return render_personnes(upstream_session)
 
 @app.route("/logout")
 def logout():
@@ -271,6 +286,7 @@ def login():
   #  return root()  
   if not "username" in request.form or not "password" in request.form:
     return render_template('login.html', webdir=args.webdir)
+
   #create a new session
   session = binascii.hexlify(os.urandom(32)).decode('utf8')
   upstream_session=requests.Session()
@@ -282,9 +298,17 @@ def login():
   upstream_login(upstream_session)
   upstream_populate_personnes(upstream_session)
   upstream_populate_engagements(upstream_session)
-  resp = make_response(render_template('list_engagements.html', webdir=args.webdir, engagements=upstream_session.engagements))
+  resp = make_response(render_personnes(upstream_session))
   resp.set_cookie('ffesession', session)
   return resp
+
+@app.route("/engagements")
+def engagements():
+  session = request.cookies.get('ffesession')
+  if session is None or not session in upstream_sessions:
+    return render_template('login.html', webdir=args.webdir)
+  upstream_session = upstream_sessions[session]
+  return render_list_engagements(upstream_session)
 
 @app.route("/engagement/<meta_id>")
 def engagement(meta_id):

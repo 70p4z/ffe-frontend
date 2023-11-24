@@ -8,8 +8,9 @@
 </head>
 <body>
   <p>
-  <a href="{{webdir}}/">Liste</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <a style="" href="{{webdir}}/logout">Logout</a>
+  <a href="{{webdir}}/">&#x1F93A Club</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="{{webdir}}/engagements">&#x1F3C6 Engagements</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <a style="" href="{{webdir}}/logout">&#x2620 Logout</a>
   </p>
   <table>
       <p><big>{{ engagements[0]['meta_date'] }} {{ engagements[0]['commune'] }}</big></p>
@@ -19,11 +20,11 @@
       {% endfor %}
       </p>
       <tr class="odd">
-      <td><b>NOM</b></td><td><b>Prenom</b></td><td><b>Email</b></td><td><b>Categorie</b></td><td><b>Non-inscrit</b></td><td><b>Inscrit</b></td>
+      <td><b>NOM</b></td><td><b>Prenom</b></td><td><b>Categorie</b></td><td><b>Non-inscrit</b></td><td><b>Inscrit</b></td>
       </tr>
       {% for personne in personnes %}
       <tr height="35px" class="{{ loop.cycle('even', 'odd') }}">
-        <td>{{personne['nom']}}</td><td>{{personne['prenom']}}</td><td><a href="mailto:{{personne['mail']}}">{{personne['mail']}}</a></td><td>{{personne['sexe']}} - {{personne['categorie']}}</td>
+        <td>{{personne['nom']}}</td><td>{{personne['prenom']}}</td><td>{{personne['sexe']}} - {{personne['categorie']}}</td>
         {# subscribe #}
         <td width="10%" bgcolor="{% if personne['subs']|length > 0 %}lightyellow{% endif %}">
         {% for sub in personne['subs'] %}

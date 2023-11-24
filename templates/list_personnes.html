@@ -1,0 +1,24 @@
+<head>
+  <style>
+  .odd {
+     background: #EEEEEE;
+  }
+  </style>
+</head>
+<body>
+  <p>
+    <a href="{{webdir}}/engagements">&#x1F3C6 Engagements</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="{{webdir}}/logout">&#x2620 Logout</a>
+  </p>
+  <table>
+      <p><big>&#x1F93A Le club</big></p>
+      <tr class="odd">
+      <td><b>NOM</b></td><td><b>Prenom</b></td><td><b>Email</b></td><td><b>Sexe</b></td><td><b>Catégorie</b></td>
+      </tr>
+      {% for personne in personnes %}
+      <tr height="35px" class="{{ loop.cycle('even', 'odd') }}">
+        <td>{{personne['nom']}}</td><td>{{personne['prenom']}}</td><td><a href="mailto:{{personne['mail']}}">{{personne['mail']}}</a></td><td>{{personne['sexe']}}</td><td>{{personne['categorie_age']}}</td>
+      </tr>
+      {% endfor %}
+  </table>
+</body>
