@@ -258,20 +258,11 @@ def login():
   # store given credentials
   upstream_session.username = request.args['username']
   upstream_session.password = request.args['password']
+  upstream_sessions[session] = upstream_session
+
   upstream_login(upstream_session)
   upstream_populate_personnes(upstream_session)
-
-  if not os.path.exists("cached-engagements.json"):
-    upstream_populate_engagements(upstream_session)
-    #d = open("cached-engagements.json", "w+")
-    #d.write(json.dumps(upstream_session.engagements))
-    #d.close()
-  else:
-    d = open("cached-engagements.json", 'r')
-    upstream_session.engagements = json.loads(d.read())
-    d.close()
-
-  upstream_sessions[session] = upstream_session
+  upstream_populate_engagements(upstream_session)
   resp = make_response(render_template('list_engagements.html', webdir=args.webdir, engagements=upstream_session.engagements))
   resp.set_cookie('ffesession', session)
   return resp
