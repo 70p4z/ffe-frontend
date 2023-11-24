@@ -19,7 +19,7 @@ import binascii
 
 VERSION="1"
 
-TIMEOUT_S=600
+TIMEOUT_S=3600
 
 LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO').upper()
 LOGFORMAT = '%(asctime)s %(levelname)s %(threadName)s %(funcName)s %(message)s'
