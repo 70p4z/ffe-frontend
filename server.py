@@ -61,7 +61,7 @@ def upstream_login(upstream_session):
   # Grab the session
   r = upstream_session.get(f'{upstream_stem}/auth/login', headers=headers)
   m = re.search(r'name="csrf-token"\s+content="(\w+)"', r.text)
-  if(r.status_code != 200):
+  if(r.status_code < 200 or r.status_code >= 300):
     raise BaseException("Can't contact remote authentication service")
   try:
     csrf_token=m.group(1)
@@ -74,7 +74,7 @@ def upstream_login(upstream_session):
   formdata["username"]= upstream_session.username
   formdata["password"]= upstream_session.password
   r = upstream_session.post(f'{upstream_stem}/auth/login', data=formdata, headers=headers, allow_redirects=True)
-  if(r.status_code != 200):
+  if(r.status_code < 200 or r.status_code >= 300):
     raise BaseException("Username/password are invalid")
   m = re.search(r'currentStructureAuth\s*=\s*{"id"\s*:\s*(\w+),', r.text)
   try:
@@ -114,6 +114,15 @@ def upstream_populate_personnes(upstream_session):
         val['discipline_code'].append('EPE')
       if val['discipline'].find('Sabre\\') !=1:
         val['discipline_code'].append('SAB')
+      if val['discipline'].find('Laser\\') !=1:
+        val['discipline_code'].append('LAS')
+    if val['categorie_age'].startswith("V"):
+      log.debug(val['categorie_age'])
+      m = re.search(r'V.*RANS.*([0-9]+)', val['categorie_age'].upper())
+      val['categorie_age']='V'+m.group(1)
+    if val['categorie_age'].upper().startswith("SEN"):
+      val['categorie_age']="SENIOR" # remove trailing S
+
   log.debug(upstream_session.personnes)
   log.debug(len(upstream_session.personnes))
   log.debug(total)
@@ -133,30 +142,37 @@ def upstream_populate_engagements(upstream_session, start=0):
     #start=0
     length=100
     total=-1
-    upstream_session.engagements=[]
+    engagements=[]
     while total == -1 or start < total:
       r = upstream_session.get(f'{upstream_stem}/engagement/ajax?start={start}&length={length}&{filtr}', headers=headers)
       j = r.json()
       if total == -1:
         total = j['total']
       start += len(j['data'])
-      upstream_session.engagements=upstream_session.engagements+j['data']
+      engagements=engagements+j['data']
       sys.stdout.write(f'\rloading engagements: {start}/{total} ({round(start*100/total)}%)')
       # avoid too long loading
       if start >= 200:
         break;
-    log.debug(upstream_session.engagements)
-    log.debug(len(upstream_session.engagements))
+    log.debug(engagements)
+    log.debug(len(engagements))
     log.debug(total)
 
     # group by by date + commune
     eng=defaultdict(list)
-    for e in upstream_session.engagements:
+    for e in engagements:
       # refactor date for sorting to work nicely
       meta_date = datetime.datetime.strptime(e['date_debut'], '%d/%m/%Y').strftime('%Y/%m/%d')
       e['meta_date'] = meta_date
-      e['sexe']=e['sexe'][0:1]
-      eng[f"{meta_date} {e['commune']}"].append(e)
+      #e['sexe']=e['sexe'][0:1]# accept mixte too
+      # todo optimize with a dict here
+      already=False
+      for pe in eng[f"{meta_date} {e['commune']}"]:
+        if pe['id'] == e['id']:
+          already=True
+          break
+      if not already:
+        eng[f"{meta_date} {e['commune']}"].append(e)
 
     log.debug(eng)
 
@@ -169,6 +185,9 @@ def upstream_populate_engagements(upstream_session, start=0):
       for v in val:
         v['meta_id'] = str(meta_id)
       meta_id+=1
+
+    log.debug(seng)
+
   except:
     traceback.print_exc()
     seng=OrderedDict()
@@ -203,7 +222,7 @@ def upstream_subscribe(upstream_session, engagement_id, personne_id):
   hdrs['Referer'] = f'{upstream_stem}/engagement/engagement/{engagement_id}'
   hdrs['X-XSRF-TOKEN'] = unquote(upstream_session.cookies['XSRF-TOKEN'])
   r = upstream_session.post(f'{upstream_stem}/engagement/engage/{engagement_id}/{upstream_session.structure_id}', json=data, headers=hdrs, allow_redirects=True)
-  if r.status_code != 200:
+  if(r.status_code < 200 or r.status_code >= 300):
     log.info(r.text)
     raise BaseException("Subscription failed")
 
@@ -212,7 +231,7 @@ def upstream_unsubscribe(upstream_session, engagement_id, subscription_id):
   hdrs['Referer'] = f'{upstream_stem}/engagement/engagement/{engagement_id}'
   hdrs['X-XSRF-TOKEN'] = unquote(upstream_session.cookies['XSRF-TOKEN'])
   r = upstream_session.post(f'{upstream_stem}/engagement/delete-engage/{engagement_id}/{upstream_session.structure_id}/{subscription_id}', headers=hdrs, json=None, allow_redirects=True)
-  if r.status_code != 200:
+  if(r.status_code < 200 or r.status_code >= 300):
     log.info(r.text)
     raise BaseException("Unsubscription failed")
 
@@ -288,21 +307,24 @@ def engagement(meta_id):
     pers['personne_id'] = p['personne_id']
     pers['nom'] = p['nom']
     pers['prenom'] = p['prenom']
+    pers['mail'] = p['mail']
     pers['categorie'] = p['categorie_age'].upper()
     pers['sexe'] = p['sexe'][0:1]
     pers['subs'] = []
-    log.debug(f"{pers['prenom']} {p['discipline_code']}")
+    #log.debug(f"{pers['prenom']} {p['discipline_code']}")
     for e in engagements:
-      if p['categorie_age'].upper().startswith(e['categorie']):
-        # sometimes the sexe in competition contains BOTH M and F
-        if e['sexe'].find(p['sexe'].upper()[0:1])!=-1:
-          # check if discpline matches
-          if e['discipline_code'].upper() in p['discipline_code']:
-            # retrieve the subscription id if already subscribed to that engagement (to unsubscribe)
-            i = ""
-            if p['personne_id'] in engages[e['id']]:
-              i = engages[e['id']][p['personne_id']]['sub_id']
-            pers['subs'].append({ 'id': e['id'], 'categorie': e['categorie'], 'discipline': e['discipline_code'], 'sub_id': i})
+      # TODO ensure no dup? of ID in the list ?
+      if e['type'].upper().startswith("INDIV") :
+        if e['categorie'].find(p['categorie_age']) != -1:
+          # sometimes the sexe in competition contains BOTH M and F, or Mixte
+          if e['sexe'].upper().find(p['sexe'].upper()[0:1])!=-1:
+            # check if discpline matches
+            if e['discipline_code'].upper() in p['discipline_code']:
+              # retrieve the subscription id if already subscribed to that engagement (to unsubscribe)
+              i = ""
+              if p['personne_id'] in engages[e['id']]:
+                i = engages[e['id']][p['personne_id']]['sub_id']
+              pers['subs'].append({ 'id': e['id'], 'sexe': e['sexe'], 'categorie': e['categorie'], 'discipline': e['discipline_code'], 'sub_id': i})
     personnes.append(pers)
   # sort by name
   personnes=sorted(personnes, key=lambda x: x['prenom'])

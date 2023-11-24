@@ -12,25 +12,24 @@
   <table>
       <big>{{ engagements[0]['meta_date'] }} {{ engagements[0]['commune'] }}</big>
       <tr class="odd">
-      <td><b>NOM</b></td><td><b>Prenom</b></td><td><b>Categorie</b></td><td><b>Non-inscrit</b></td><td><b>Inscrit</b></td>
+      <td><b>NOM</b></td><td><b>Prenom</b></td><td><b>Email</b></td><td><b>Categorie</b></td><td><b>Non-inscrit</b></td><td><b>Inscrit</b></td>
       </tr>
       {% for personne in personnes %}
       <tr height="35px" class="{{ loop.cycle('even', 'odd') }}">
-        <td>{{personne['nom']}}</td><td>{{personne['prenom']}}</td><td>{{personne['sexe']}} - {{personne['categorie']}}</td>
+        <td>{{personne['nom']}}</td><td>{{personne['prenom']}}</td><td><a href="mailto:{{personne['mail']}}">{{personne['mail']}}</a></td><td>{{personne['sexe']}} - {{personne['categorie']}}</td>
         {# subscribe #}
-        <td width="30%" bgcolor="{% if personne['subs']|length > 0 %}lightyellow{% endif %}">
+        <td width="25%" bgcolor="{% if personne['subs']|length > 0 %}lightyellow{% endif %}">
         {% for sub in personne['subs'] %}
           {% if sub['sub_id'] == ""  %}
-          <a href="{{webdir}}/subscribe/{{sub['id']}}/{{personne['personne_id']}}">{{sub['discipline']}}-{{sub['categorie']}}</a>
+          <a href="{{webdir}}/subscribe/{{sub['id']}}/{{personne['personne_id']}}">{{sub['discipline']}}-{{sub['sexe']}}-{{sub['categorie']}}</a>
           {% endif %}
-        {% else %}
         {% endfor %}
         </td>
         {# unsubscribe #}
-        <td width="30%" bgcolor="{% if personne['subs']|length > 0 %}lightgreen{% endif %}">
+        <td width="25%" bgcolor="{% if personne['subs']|length > 0 %}lightgreen{% endif %}">
         {% for sub in personne['subs'] %}
           {% if sub['sub_id'] != ""  %}
-          <a href="{{webdir}}/unsubscribe/{{sub['id']}}/{{sub['sub_id']}}">{{sub['discipline']}}-{{sub['categorie']}}</a>
+          <a href="{{webdir}}/unsubscribe/{{sub['id']}}/{{sub['sub_id']}}">{{sub['discipline']}}-{{sub['sexe']}}-{{sub['categorie']}}</a>
           {% endif %}
         {% endfor %}
         </td>
