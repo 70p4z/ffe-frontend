@@ -43,6 +43,7 @@ app = Flask(__name__)
 
 # Basic config with security for forms and session cookie
 basedir = os.path.abspath(os.path.dirname(__file__))
+log.info(f'directory: {basedir}')
 app.config['CSRF_ENABLED'] = True
 app.config['SECRET_KEY'] = 'thisismyscretkey'
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -142,7 +143,7 @@ def upstream_populate_engagements(upstream_session, start=0):
   
   engagement_status = 3 # open for subscription
   
-  # retrieve the whole list of club affiliates
+  # retrieve the whole list of available engagements, ordered by date
   filtr=f'columns[0][data]=date_debut&columns[0][name]=debut_competition&columns[0][searchable]=true&columns[0][orderable]=true&columns[0][search][value]=&columns[0][search][regex]=false&order[0][column]=0&order[0][dir]=asc&filtres[reset]=true&filtres[ville]=&filtres[niveau]=&filtres[discipline]=0&filtres[sexe]=0&filtres[categorie]=0&filtres[ind_equip]=0&filtres[intitule]=&filtres[structure]=&filtres[typeCompetition]=&filtres[niveauCompetition]=&filtres[saison]=&filtres[statut]={engagement_status}&_={round(time.time()*1000)}'
   try:
     #start=0
@@ -359,7 +360,8 @@ def engagement(meta_id):
     #log.debug(f"{pers['prenom']} {p['discipline_code']}")
     for e in engagements:
       # TODO ensure no dup? of ID in the list ?
-      if e['type'].upper().startswith("INDIV") :
+      if e['type'].upper().startswith("INDIV") \
+        and e['can_engage'] == True:
         if e['categorie'].find(p['categorie_age']) != -1:
           # sometimes the sexe in competition contains BOTH M and F, or Mixte
           if e['sexe'].upper().find(p['sexe'].upper()[0:1])!=-1:
@@ -408,6 +410,7 @@ def unsubscribe(engagement_id, subscription_id):
 upstream_sessions={}
 common_data={}
 common_data['engagements']=OrderedDict()
+common_data['last_populate_engagements']=0
 try:
   cache = open("cached-engagements.json", "r")
   common_data['engagements'] = json.loads(cache.read())

@@ -7,6 +7,16 @@
   </style>
 </head>
 <body>
+  <script>
+    function remove(element) {
+        element.parentNode.removeChild(element);
+    }
+    function ajax(url) {
+      let xhr = new XMLHttpRequest();
+      xhr.open('GET', url);
+      xhr.send();
+    }
+  </script>
   <p>
   <a href="{{webdir}}/">&#x1F93A; Club</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="{{webdir}}/engagements">&#x1F3C6; Engagements</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -29,7 +39,8 @@
         <td width="10%" bgcolor="{% if personne['subs']|length > 0 %}lightyellow{% endif %}">
         {% for sub in personne['subs'] %}
           {% if sub['sub_id'] == ""  %}
-          <a href="{{webdir}}/subscribe/{{sub['id']}}/{{personne['personne_id']}}">{{sub['discipline']}}</a>
+          {% set url = webdir+"/subscribe/"+sub['id']|string+"/"+personne['personne_id']|string %}
+          <button id="{{sub['id']}}_{{personne['personne_id']}}" onClick="ajax('{{url}}'); remove(this);">{{sub['discipline']}}-{{sub['sexe']}}-{{sub['categorie']}}</button><br>
           {# -{{sub['sexe']}}-{{sub['categorie']}} #}
           {% endif %}
         {% endfor %}
@@ -38,7 +49,8 @@
         <td width="10%" bgcolor="{% if personne['subs']|length > 0 %}lightgreen{% endif %}">
         {% for sub in personne['subs'] %}
           {% if sub['sub_id'] != ""  %}
-          <a href="{{webdir}}/unsubscribe/{{sub['id']}}/{{sub['sub_id']}}">{{sub['discipline']}}</a>
+          {% set url = webdir+"/unsubscribe/"+sub['id']|string+"/"+sub['sub_id']|string %}
+          <button id="{{sub['id']}}_{{sub['sub_id']}}" onClick="ajax('{{url}}'); remove(this);">{{sub['discipline']}}-{{sub['sexe']}}-{{sub['categorie']}}</button><br>
           {# -{{sub['sexe']}}-{{sub['categorie']}} #}
           {% endif %}
         {% endfor %}
